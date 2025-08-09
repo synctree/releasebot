@@ -51,7 +51,10 @@ function getActionInputs() {
     aiConfidenceThreshold: parseFloat(core.getInput('ai-confidence-threshold')),
 
     // Conventional Commits Configuration
-    conventionalTypes: core.getInput('conventional-types').split(',').map(t => t.trim()),
+    conventionalTypes: core
+      .getInput('conventional-types')
+      .split(',')
+      .map(t => t.trim()),
 
     // Changelog Configuration
     changelogFormat: core.getInput('changelog-format') as 'keepachangelog' | 'custom',
