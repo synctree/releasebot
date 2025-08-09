@@ -1,0 +1,149 @@
+name: 'AI Release Assistant'
+description: 'Intelligent release automation with AI-powered versioning and changelog generation'
+author: 'Synctree'
+
+branding:
+  icon: 'git-branch'
+  color: 'blue'
+
+inputs:
+  # Core Configuration
+  main-branch:
+    description: 'Main branch to analyze changes from'
+    required: false
+    default: 'main'
+  
+  feature-branch:
+    description: 'Feature branch containing changes to analyze'
+    required: true
+  
+  github-token:
+    description: 'GitHub token for API access'
+    required: false
+    default: ${{ github.token }}
+  
+  # File Paths
+  package-json-path:
+    description: 'Path to package.json file'
+    required: false
+    default: './package.json'
+  
+  changelog-path:
+    description: 'Path to CHANGELOG.md file'
+    required: false
+    default: './CHANGELOG.md'
+  
+  # Multi-Strategy Configuration
+  versioning-strategy:
+    description: 'Versioning analysis strategy: conventional, ai, or hybrid'
+    required: false
+    default: 'hybrid'
+  
+  ai-provider:
+    description: 'AI provider for analysis: openai, anthropic'
+    required: false
+    default: 'openai'
+  
+  openai-api-key:
+    description: 'OpenAI API key for AI-powered analysis'
+    required: false
+  
+  anthropic-api-key:
+    description: 'Anthropic API key for AI-powered analysis'
+    required: false
+  
+  # AI Configuration
+  ai-model:
+    description: 'AI model to use (e.g., gpt-4, gpt-3.5-turbo, claude-3-opus)'
+    required: false
+    default: 'gpt-4'
+  
+  ai-confidence-threshold:
+    description: 'Minimum confidence score to trust AI analysis (0.0-1.0)'
+    required: false
+    default: '0.7'
+  
+  # Conventional Commits Configuration
+  conventional-types:
+    description: 'Comma-separated list of conventional commit types to recognize'
+    required: false
+    default: 'feat,fix,docs,style,refactor,test,chore,build,ci,perf'
+  
+  # Changelog Configuration
+  changelog-format:
+    description: 'Changelog format: keepachangelog, custom'
+    required: false
+    default: 'keepachangelog'
+  
+  changelog-template:
+    description: 'Path to custom changelog template (when format is custom)'
+    required: false
+  
+  # Release Configuration
+  pre-release:
+    description: 'Generate a pre-release version (alpha, beta, rc)'
+    required: false
+    default: 'false'
+  
+  pre-release-identifier:
+    description: 'Pre-release identifier when pre-release is true'
+    required: false
+    default: 'beta'
+  
+  skip-changelog:
+    description: 'Skip changelog generation'
+    required: false
+    default: 'false'
+  
+  skip-git-tag:
+    description: 'Skip creating git tag for the release'
+    required: false
+    default: 'false'
+  
+  # Advanced Configuration
+  max-commits-analysis:
+    description: 'Maximum number of commits to analyze (performance optimization)'
+    required: false
+    default: '100'
+  
+  enable-caching:
+    description: 'Enable AI response caching to reduce API costs'
+    required: false
+    default: 'true'
+  
+  debug-mode:
+    description: 'Enable detailed logging for debugging'
+    required: false
+    default: 'false'
+
+outputs:
+  version:
+    description: 'The calculated version number'
+  
+  release-branch:
+    description: 'The name of the release branch created'
+  
+  version-bump:
+    description: 'The type of version bump (major, minor, patch)'
+  
+  changelog-entry:
+    description: 'The generated changelog entry'
+  
+  analysis-strategy:
+    description: 'The strategy used for analysis (conventional, ai, hybrid)'
+  
+  ai-confidence:
+    description: 'The AI confidence score (0.0-1.0) if AI was used'
+  
+  analysis-reasoning:
+    description: 'Human-readable explanation of the versioning decision'
+  
+  commit-count:
+    description: 'Number of commits analyzed'
+  
+  breaking-changes:
+    description: 'Whether breaking changes were detected (true/false)'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
