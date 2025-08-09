@@ -1,0 +1,60 @@
+# Files and directories for Copilot to ignore
+# These contain sensitive data or are not relevant for code suggestions
+
+# Build outputs and dependencies
+node_modules/
+dist/
+lib/
+*.tsbuildinfo
+coverage/
+
+# Logs and runtime data
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment and secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cache directories
+.npm
+.eslintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Git files (not relevant for code context)
+.git/
+
+# Package manager files
+.pnp
+.pnp.js
+.yarn-integrity
+
+# Test artifacts that don't need context
+*.tgz
+.node_repl_history
