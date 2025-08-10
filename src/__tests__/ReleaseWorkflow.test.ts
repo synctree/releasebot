@@ -24,8 +24,6 @@ describe('ReleaseWorkflow', () => {
       changelogPath: './CHANGELOG.md',
       versioningStrategy: 'conventional',
       aiProvider: 'openai',
-      openaiApiKey: undefined,
-      anthropicApiKey: undefined,
       aiModel: 'gpt-4',
       aiConfidenceThreshold: 0.8,
       conventionalTypes: ['feat', 'fix', 'docs'],
@@ -51,7 +49,6 @@ describe('ReleaseWorkflow', () => {
 
     it('should throw error for AI strategy without API key', () => {
       mockConfig.versioningStrategy = 'ai';
-      mockConfig.openaiApiKey = undefined;
       expect(() => new ReleaseWorkflow(mockConfig)).toThrow(WorkflowError);
     });
   });
