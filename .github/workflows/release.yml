@@ -1,0 +1,114 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
+        type: string
+      release_type:
+        description: 'Type of release'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - prerelease
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        run: pnpm install
+        
+      - name: Run tests
+        run: pnpm test
+        
+      - name: Build distribution
+        run: pnpm run build
+        
+      - name: Verify dist exists
+        run: |
+          if [ ! -f "dist/index.js" ]; then
+            echo "dist/index.js not found!"
+            exit 1
+          fi
+          echo "✅ dist/index.js found ($(wc -c < dist/index.js) bytes)"
+          
+      - name: Create release branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b release/${{ inputs.version }}
+          
+      - name: Remove dist from gitignore temporarily
+        run: |
+          sed -i '/^dist\//d' .gitignore
+          
+      - name: Commit built distribution
+        run: |
+          git add dist/
+          git add .gitignore
+          git commit -m "build: add distribution for ${{ inputs.version }}"
+          
+      - name: Create and push tag
+        run: |
+          git tag ${{ inputs.version }}
+          git push origin release/${{ inputs.version }}
+          git push origin ${{ inputs.version }}
+          
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ inputs.version }}
+          release_name: ${{ inputs.version }}
+          draft: false
+          prerelease: ${{ inputs.release_type == 'prerelease' }}
+          body: |
+            ## Changes in ${{ inputs.version }}
+            
+            🚀 **This release includes the built distribution files required for GitHub Actions usage.**
+            
+            ### Usage
+            ```yaml
+            - uses: synctree/releasebot@${{ inputs.version }}
+              with:
+                feature-branch: 'feature/my-feature'
+                versioning-strategy: 'hybrid'
+                openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+            ```
+            
+            ### What's Included
+            - ✅ Compiled TypeScript (`dist/index.js`)
+            - ✅ All dependencies bundled
+            - ✅ Ready for production use
+            
+            See [README.md](https://github.com/synctree/releasebot/blob/main/README.md) for full documentation.
+            
+      - name: Restore gitignore
+        run: |
+          git checkout main
+          echo "🎉 Release ${{ inputs.version }} created successfully!"
+          echo "📖 Users can now use: synctree/releasebot@${{ inputs.version }}"

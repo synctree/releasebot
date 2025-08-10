@@ -1,0 +1,42 @@
+name: Build Distribution
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      - run: pnpm install
+      - run: pnpm test
+      - run: pnpm run build
+      
+      # Only update dist branch on main branch pushes
+      - name: Update dist branch
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Create or switch to dist branch
+          git checkout -B dist
+          
+          # Remove dist from gitignore for this branch only
+          sed -i '/^dist\//d' .gitignore
+          
+          # Add and commit built files
+          git add dist/ .gitignore
+          git commit -m "build: update distribution files for ${{ github.sha }}" || exit 0
+          
+          # Push to dist branch
+          git push origin dist --force
