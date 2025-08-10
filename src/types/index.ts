@@ -111,20 +111,20 @@ export interface ConventionalSection {
 // =============================================================================
 
 /** Categories for organizing changelog entries */
-export type ChangeCategory = 
-  | 'breaking'     // Breaking changes
-  | 'feat'         // New features
-  | 'fix'          // Bug fixes
-  | 'perf'         // Performance improvements
-  | 'refactor'     // Code refactoring
-  | 'docs'         // Documentation
-  | 'style'        // Code style changes
-  | 'test'         // Test updates
-  | 'build'        // Build system changes
-  | 'ci'           // CI/CD changes
-  | 'chore'        // Maintenance tasks
-  | 'revert'       // Reverts
-  | 'deps';        // Dependency updates
+export type ChangeCategory =
+  | 'breaking' // Breaking changes
+  | 'feat' // New features
+  | 'fix' // Bug fixes
+  | 'perf' // Performance improvements
+  | 'refactor' // Code refactoring
+  | 'docs' // Documentation
+  | 'style' // Code style changes
+  | 'test' // Test updates
+  | 'build' // Build system changes
+  | 'ci' // CI/CD changes
+  | 'chore' // Maintenance tasks
+  | 'revert' // Reverts
+  | 'deps'; // Dependency updates
 
 /** Individual changelog entry */
 export interface ChangelogEntry {
