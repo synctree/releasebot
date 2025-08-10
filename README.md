@@ -72,6 +72,34 @@ pnpm lint
 pnpm format
 ```
 
+## Development Workflow
+
+### Pre-commit Hooks
+
+This project uses [Husky](https://github.com/typicode/husky) and [lint-staged](https://github.com/okonet/lint-staged) to automatically lint and format code before commits:
+
+- **ESLint**: Automatically fixes linting issues
+- **Prettier**: Formats code according to project standards
+
+The pre-commit hook runs automatically when you commit changes. If you need to bypass it temporarily (not recommended), use:
+
+```bash
+git commit --no-verify -m "your message"
+```
+
+### Manual Formatting
+
+```bash
+# Run linting with auto-fix
+pnpm lint:fix
+
+# Format all files
+pnpm format
+
+# Check formatting without changes
+pnpm format:check
+```
+
 ### Project Structure
 
 ```
