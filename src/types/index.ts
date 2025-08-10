@@ -514,3 +514,90 @@ export interface OperationOptions {
   /** Timeout in milliseconds */
   timeout?: number;
 }
+
+// =============================================================================
+// CHANGELOG MANAGER TYPES
+// =============================================================================
+
+/** Parsed changelog structure */
+export interface ParsedChangelog {
+  /** Changelog header information */
+  header: ChangelogHeader;
+  /** Unreleased changes */
+  unreleased: ChangelogSection;
+  /** Released versions */
+  releases: ChangelogRelease[];
+  /** Raw markdown content */
+  rawContent: string;
+}
+
+/** Changelog header information */
+export interface ChangelogHeader {
+  /** Title of the changelog */
+  title: string;
+  /** Description text */
+  description: string;
+  /** Keep a Changelog URL */
+  keepAChangelogUrl?: string;
+  /** Semantic Versioning URL */
+  semverUrl?: string;
+}
+
+/** A section within a changelog */
+export interface ChangelogSection {
+  /** Section entries organized by category */
+  entries: Record<string, string[]>;
+  /** Raw markdown content for this section */
+  content: string;
+}
+
+/** A released version in the changelog */
+export interface ChangelogRelease {
+  /** Version information */
+  version: string;
+  /** Release date */
+  date?: string;
+  /** Whether this is unreleased */
+  unreleased: boolean;
+  /** Section entries */
+  entries: Record<string, string[]>;
+  /** Raw markdown content */
+  content: string;
+}
+
+/** Options for changelog generation */
+export interface ChangelogGenerationOptions {
+  /** Include unreleased section */
+  includeUnreleased?: boolean;
+  /** Maximum number of releases to include */
+  maxReleases?: number;
+  /** Date format for releases */
+  dateFormat?: string;
+  /** Custom section order */
+  sectionOrder?: string[];
+}
+
+/** Result of changelog validation */
+export interface ChangelogValidationResult extends ValidationResult {
+  /** Specific validation issues */
+  issues: ChangelogValidationIssue[];
+}
+
+/** Specific changelog validation issue */
+export interface ChangelogValidationIssue {
+  /** Type of issue */
+  type:
+    | 'missing-header'
+    | 'invalid-version'
+    | 'missing-section'
+    | 'duplicate-entry'
+    | 'invalid-format';
+  /** Severity level */
+  severity: 'error' | 'warning' | 'info';
+  /** Issue description */
+  message: string;
+  /** Line number where issue occurs */
+  line?: number;
+  /** Column number where issue occurs */
+  column?: number;
+}
