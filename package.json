@@ -16,7 +16,8 @@
     "format:check": "prettier --check \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "package": "npm run build && npm run test"
+    "package": "npm run build && npm run test",
+    "prepare": "husky"
   },
   "keywords": [
     "github-actions",
@@ -41,7 +42,9 @@
     "@typescript-eslint/parser": "^8.39.0",
     "@vercel/ncc": "^0.38.3",
     "eslint": "^9.33.0",
+    "husky": "^9.1.7",
     "jest": "^30.0.5",
+    "lint-staged": "^16.1.5",
     "prettier": "^3.6.2",
     "ts-jest": "^29.4.1",
     "tsx": "^4.20.3",
@@ -53,5 +56,11 @@
     "@actions/github": "^6.0.1",
     "openai": "^5.12.2",
     "semver": "^7.7.2"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }
