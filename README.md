@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: synctree/ai-release-tool@v1
+      - uses: synctree/releasebot@v1
         with:
           feature-branch: ${{ inputs.feature_branch }}
           main-branch: 'main'
@@ -75,7 +75,7 @@ jobs:
         with:
           fetch-depth: 0  # Required for proper git diff analysis
       
-      - uses: synctree/ai-release-tool@v1
+      - uses: synctree/releasebot@v1
         with:
           feature-branch: ${{ inputs.feature_branch }}
           main-branch: 'main'
@@ -109,7 +109,7 @@ jobs:
         with:
           fetch-depth: 0
       
-      - uses: synctree/ai-release-tool@v1
+      - uses: synctree/releasebot@v1
         id: analysis
         with:
           feature-branch: ${{ github.head_ref }}
@@ -158,7 +158,7 @@ jobs:
         with:
           fetch-depth: 0
       
-      - uses: synctree/ai-release-tool@v1
+      - uses: synctree/releasebot@v1
         with:
           feature-branch: 'develop'
           main-branch: 'main'
@@ -173,7 +173,7 @@ jobs:
 
 ```yaml
 # Release from develop branch
-- uses: synctree/ai-release-tool@v1
+- uses: synctree/releasebot@v1
   with:
     feature-branch: 'develop'    # All integrated features
     main-branch: 'main'          # Last production release
@@ -184,7 +184,7 @@ jobs:
 
 ```yaml
 # Release specific feature
-- uses: synctree/ai-release-tool@v1
+- uses: synctree/releasebot@v1
   with:
     feature-branch: 'feature/user-auth'  # Specific feature
     main-branch: 'main'                  # Production baseline
@@ -195,7 +195,7 @@ jobs:
 
 ```yaml
 # Release from main/trunk
-- uses: synctree/ai-release-tool@v1
+- uses: synctree/releasebot@v1
   with:
     feature-branch: 'main'       # Current trunk state
     main-branch: 'release/v1.0'  # Last release tag
