@@ -259,6 +259,41 @@ describe('GitOperations', () => {
         "Branch 'main' does not exist"
       );
     });
+
+    it('should handle remote-only branches in generateDiff', () => {
+      // Mock scenario where branches only exist as remote references
+      mockExecSync
+        // validateBranches calls - main branch local check succeeds
+        .mockReturnValueOnce('abc123\n') // validateBranches: rev-parse --verify main (succeeds locally)
+        // validateBranches calls - feature branch local check fails, but remote succeeds
+        .mockImplementationOnce(() => {
+          throw new Error('Branch does not exist'); // Local branch check fails for feature
+        })
+        .mockReturnValueOnce('def456\n') // Remote branch check succeeds for feature
+        // resolveBranchRef calls - main resolves locally
+        .mockReturnValueOnce('abc123\n') // resolveBranchRef: rev-parse --verify main (succeeds locally)
+        // resolveBranchRef calls - feature fails locally, succeeds as remote
+        .mockImplementationOnce(() => {
+          throw new Error('Branch does not exist'); // Local branch check fails for feature
+        })
+        .mockReturnValueOnce('def456\n') // Remote branch check succeeds for feature
+        .mockReturnValueOnce(
+          `abc123|feat: add remote feature|John Doe|john@example.com|1640995200|John Doe|john@example.com|1640995200\n`
+        ) // git log
+        .mockReturnValueOnce('abc123\n') // rev-list --parents (just commit sha, no parents)
+        .mockReturnValueOnce('') // show --numstat for commit files
+        .mockReturnValueOnce('5\t0\tsrc/remote-feature.ts\n'); // diff --numstat
+
+      const result = gitOps.generateDiff('main', 'feature');
+
+      expect(result.commits).toHaveLength(1);
+      expect(result.commits[0]?.message).toBe('feat: add remote feature');
+      expect(result.fileChanges).toHaveLength(1);
+      expect(result.fileChanges[0]?.path).toBe('src/remote-feature.ts');
+      expect(mockCore.debug).toHaveBeenCalledWith(
+        "Branch 'feature' found as remote branch 'origin/feature'"
+      );
+    });
   });
 
   describe('validateBranches', () => {
@@ -274,7 +309,7 @@ describe('GitOperations', () => {
       // Reset the mock to avoid interference from previous tests
       mockExecSync.mockReset();
 
-      // Mock sequence: local branch check fails, remote branch check fails, fetch fails
+      // Mock sequence: local branch check fails, remote branch check fails, all fetch attempts fail
       mockExecSync
         .mockReturnValueOnce('abc123\n') // First call for 'main' succeeds
         .mockImplementationOnce(() => {
@@ -284,7 +319,10 @@ describe('GitOperations', () => {
           throw new Error('Remote branch does not exist'); // Remote branch check fails
         })
         .mockImplementationOnce(() => {
-          throw new Error('Fetch failed'); // Fetch attempt fails
+          throw new Error('Fetch failed'); // fetch origin --prune fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Specific fetch failed'); // fetch origin branch fails
         });
 
       // The first call will test 'main' successfully, but the second call will fail on 'nonexistent'
@@ -301,12 +339,109 @@ describe('GitOperations', () => {
           throw new Error('Remote branch does not exist'); // Remote branch check fails
         })
         .mockImplementationOnce(() => {
-          throw new Error('Fetch failed'); // Fetch attempt fails
+          throw new Error('Fetch failed'); // fetch origin --prune fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Specific fetch failed'); // fetch origin branch fails
         });
 
       expect(() => gitOps.validateBranches(['main', 'nonexistent'])).toThrow(
         "Branch 'nonexistent' does not exist locally or on remote"
       );
+    });
+
+    it('should handle remote branches that exist after fetch', () => {
+      mockExecSync
+        .mockReturnValueOnce('abc123\n') // First call for 'main' succeeds
+        .mockImplementationOnce(() => {
+          throw new Error('Branch does not exist'); // Local branch check fails for feature
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Remote branch does not exist'); // Remote branch check fails initially
+        })
+        .mockReturnValueOnce('') // fetch origin --prune succeeds
+        .mockReturnValueOnce('def456\n'); // rev-parse origin/feature succeeds after fetch
+
+      expect(() => gitOps.validateBranches(['main', 'feature'])).not.toThrow();
+      expect(mockCore.debug).toHaveBeenCalledWith('Fetched latest remote references');
+      expect(mockCore.debug).toHaveBeenCalledWith(
+        "Branch 'feature' found as remote branch 'origin/feature' after fetch"
+      );
+    });
+
+    it('should handle branches found after specific fetch', () => {
+      mockExecSync
+        .mockReturnValueOnce('abc123\n') // First call for 'main' succeeds
+        .mockImplementationOnce(() => {
+          throw new Error('Branch does not exist'); // Local branch check fails for feature
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Remote branch does not exist'); // Remote branch check fails initially
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Fetch failed'); // fetch origin --prune fails
+        })
+        .mockReturnValueOnce('') // fetch origin feature succeeds
+        .mockReturnValueOnce('def456\n'); // rev-parse origin/feature succeeds after specific fetch
+
+      expect(() => gitOps.validateBranches(['main', 'feature'])).not.toThrow();
+      expect(mockCore.debug).toHaveBeenCalledWith("Fetched specific branch 'feature' from remote");
+      expect(mockCore.debug).toHaveBeenCalledWith(
+        "Branch 'feature' verified as remote branch after specific fetch"
+      );
+    });
+
+    it('should simulate GitHub Actions environment with missing local branches', () => {
+      // Simulate GitHub Actions checkout where only specific commit is checked out
+      // and local branches don't exist, but remote references are available after fetch
+      mockExecSync
+        // Check main branch (exists locally in this scenario)
+        .mockReturnValueOnce('abc123\n') // main branch exists locally
+        // Check feature branch (doesn't exist locally, typical for GitHub Actions)
+        .mockImplementationOnce(() => {
+          throw new Error('Branch does not exist'); // Local branch check fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Remote branch does not exist'); // Remote branch check fails initially (no fetch yet)
+        })
+        .mockReturnValueOnce('') // fetch origin --prune succeeds
+        .mockReturnValueOnce('def456\n'); // Remote branch now exists after fetch
+
+      expect(() => gitOps.validateBranches(['main', 'feature'])).not.toThrow();
+      
+      // Verify the specific debug messages that indicate the GitHub Actions fix
+      expect(mockCore.debug).toHaveBeenCalledWith('Branch \'main\' found locally');
+      expect(mockCore.debug).toHaveBeenCalledWith('Fetched latest remote references');
+      expect(mockCore.debug).toHaveBeenCalledWith(
+        "Branch 'feature' found as remote branch 'origin/feature' after fetch"
+      );
+    });
+
+    it('should handle resolveBranchRef with fetch in GitHub Actions scenario', () => {
+      // Test scenario where resolveBranchRef needs to fetch remote references
+      mockExecSync
+        // validateBranches calls
+        .mockReturnValueOnce('abc123\n') // main branch exists locally
+        .mockReturnValueOnce('def456\n') // feature branch exists locally (after fetch)
+        // resolveBranchRef for main (exists locally)
+        .mockReturnValueOnce('abc123\n') // main resolves locally
+        // resolveBranchRef for feature (needs fetch)
+        .mockImplementationOnce(() => {
+          throw new Error('Branch does not exist'); // Local branch check fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Remote branch does not exist'); // Remote branch check fails initially
+        })
+        .mockReturnValueOnce('') // fetch origin --prune succeeds
+        .mockReturnValueOnce('def456\n') // Remote branch exists after fetch
+        .mockReturnValueOnce('') // git log command
+        .mockReturnValueOnce(''); // diff --numstat command
+
+      const result = gitOps.generateDiff('main', 'feature');
+
+      expect(result.commits).toHaveLength(0);
+      expect(result.fileChanges).toHaveLength(0);
+      expect(mockCore.debug).toHaveBeenCalledWith('Fetched latest remote references');
     });
   });
 
