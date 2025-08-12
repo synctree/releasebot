@@ -30,6 +30,10 @@ export declare class GitOperations {
      */
     generateDiff(baseBranch: string, featureBranch: string): GitDiff;
     /**
+     * Resolve branch name to a git reference (handles both local and remote branches)
+     */
+    private resolveBranchRef;
+    /**
      * Validate that specified branches exist
      */
     validateBranches(branches: string[]): void;
