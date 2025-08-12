@@ -172,10 +172,13 @@ describe('GitOperations', () => {
 
   describe('generateDiff', () => {
     it('should generate diff between branches', () => {
-      // Mock branch validation
+      // Mock branch validation (validateBranches)
       mockExecSync
-        .mockReturnValueOnce('abc123\n') // rev-parse --verify main
-        .mockReturnValueOnce('def456\n') // rev-parse --verify feature
+        .mockReturnValueOnce('abc123\n') // validateBranches: rev-parse --verify main (succeeds locally)
+        .mockReturnValueOnce('def456\n') // validateBranches: rev-parse --verify feature (succeeds locally)
+        // Mock branch reference resolution (resolveBranchRef)
+        .mockReturnValueOnce('abc123\n') // resolveBranchRef: rev-parse --verify main (succeeds locally)
+        .mockReturnValueOnce('def456\n') // resolveBranchRef: rev-parse --verify feature (succeeds locally)
         .mockReturnValueOnce(
           `abc123|feat: add new feature|John Doe|john@example.com|1640995200|John Doe|john@example.com|1640995200\n`
         ) // git log
@@ -230,8 +233,11 @@ describe('GitOperations', () => {
 
     it('should handle empty diff', () => {
       mockExecSync
-        .mockReturnValueOnce('abc123\n') // rev-parse --verify main
-        .mockReturnValueOnce('def456\n') // rev-parse --verify feature
+        .mockReturnValueOnce('abc123\n') // validateBranches: rev-parse --verify main (succeeds locally)
+        .mockReturnValueOnce('def456\n') // validateBranches: rev-parse --verify feature (succeeds locally)
+        // Mock branch reference resolution (resolveBranchRef)
+        .mockReturnValueOnce('abc123\n') // resolveBranchRef: rev-parse --verify main (succeeds locally)
+        .mockReturnValueOnce('def456\n') // resolveBranchRef: rev-parse --verify feature (succeeds locally)
         .mockReturnValueOnce('') // git log (empty)
         .mockReturnValueOnce(''); // diff --numstat (empty)
 
@@ -258,8 +264,8 @@ describe('GitOperations', () => {
   describe('validateBranches', () => {
     it('should validate existing branches', () => {
       mockExecSync
-        .mockReturnValueOnce('abc123\n') // rev-parse main
-        .mockReturnValueOnce('def456\n'); // rev-parse feature
+        .mockReturnValueOnce('abc123\n') // rev-parse main (succeeds locally)
+        .mockReturnValueOnce('def456\n'); // rev-parse feature (succeeds locally)
 
       expect(() => gitOps.validateBranches(['main', 'feature'])).not.toThrow();
     });
@@ -268,13 +274,17 @@ describe('GitOperations', () => {
       // Reset the mock to avoid interference from previous tests
       mockExecSync.mockReset();
 
-      // First call for 'main' branch - succeeds
-      // Second call for 'nonexistent' branch - fails
+      // Mock sequence: local branch check fails, remote branch check fails, fetch fails
       mockExecSync
-        .mockReturnValueOnce('abc123\n') // First call succeeds
+        .mockReturnValueOnce('abc123\n') // First call for 'main' succeeds
         .mockImplementationOnce(() => {
-          // Second call fails
-          throw new Error('Branch does not exist');
+          throw new Error('Branch does not exist'); // Local branch check fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Remote branch does not exist'); // Remote branch check fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Fetch failed'); // Fetch attempt fails
         });
 
       // The first call will test 'main' successfully, but the second call will fail on 'nonexistent'
@@ -283,14 +293,19 @@ describe('GitOperations', () => {
       // Reset and test again for the error message
       mockExecSync.mockReset();
       mockExecSync
-        .mockReturnValueOnce('abc123\n') // First call succeeds
+        .mockReturnValueOnce('abc123\n') // First call for 'main' succeeds
         .mockImplementationOnce(() => {
-          // Second call fails
-          throw new Error('Branch does not exist');
+          throw new Error('Branch does not exist'); // Local branch check fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Remote branch does not exist'); // Remote branch check fails
+        })
+        .mockImplementationOnce(() => {
+          throw new Error('Fetch failed'); // Fetch attempt fails
         });
 
       expect(() => gitOps.validateBranches(['main', 'nonexistent'])).toThrow(
-        "Branch 'nonexistent' does not exist"
+        "Branch 'nonexistent' does not exist locally or on remote"
       );
     });
   });

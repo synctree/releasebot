@@ -27532,10 +27532,13 @@ class GitOperations {
         try {
             // Validate both branches exist
             this.validateBranches([baseBranch, featureBranch]);
+            // Resolve branch references (handles local vs remote branches)
+            const baseRef = this.resolveBranchRef(baseBranch);
+            const featureRef = this.resolveBranchRef(featureBranch);
             // Get commit range
-            const commits = this.getCommitsBetweenBranches(baseBranch, featureBranch);
+            const commits = this.getCommitsBetweenBranches(baseRef, featureRef);
             // Get file changes
-            const fileChanges = this.getFileChangesBetweenBranches(baseBranch, featureBranch);
+            const fileChanges = this.getFileChangesBetweenBranches(baseRef, featureRef);
             // Calculate totals
             const totalAdditions = fileChanges.reduce((sum, change) => sum + change.additions, 0);
             const totalDeletions = fileChanges.reduce((sum, change) => sum + change.deletions, 0);
@@ -27562,15 +27565,51 @@ class GitOperations {
         }
     }
     /**
+     * Resolve branch name to a git reference (handles both local and remote branches)
+     */
+    resolveBranchRef(branch) {
+        try {
+            // First try local branch
+            this.executeGitCommand(`rev-parse --verify ${branch}`);
+            return branch;
+        }
+        catch {
+            try {
+                // Try remote branch
+                this.executeGitCommand(`rev-parse --verify origin/${branch}`);
+                return `origin/${branch}`;
+            }
+            catch {
+                // If neither exists, return original name and let git handle the error
+                return branch;
+            }
+        }
+    }
+    /**
      * Validate that specified branches exist
      */
     validateBranches(branches) {
         for (const branch of branches) {
             try {
+                // First try to verify local branch
                 this.executeGitCommand(`rev-parse --verify ${branch}`);
             }
             catch {
-                throw new GitOperationError(`Branch '${branch}' does not exist`);
+                try {
+                    // If local branch doesn't exist, try remote branch
+                    this.executeGitCommand(`rev-parse --verify origin/${branch}`);
+                    core.debug(`Branch '${branch}' found as remote branch 'origin/${branch}'`);
+                }
+                catch {
+                    // If neither local nor remote branch exists, try to fetch it
+                    try {
+                        this.executeGitCommand(`fetch origin ${branch}:${branch}`);
+                        core.debug(`Fetched branch '${branch}' from remote`);
+                    }
+                    catch {
+                        throw new GitOperationError(`Branch '${branch}' does not exist locally or on remote`);
+                    }
+                }
             }
         }
     }
