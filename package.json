@@ -1,6 +1,6 @@
 {
   "name": "releasebot",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered release automation tool for GitHub Actions",
   "main": "dist/index.js",
   "type": "module",
