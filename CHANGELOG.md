@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2025-08-12
+
+### Fixed
+- Fixed version parsing in release workflow: now reads and parses the version from package.json instead of passing the file path directly to the version parser
+- Ensured all release and tag operations require a corresponding changelog entry as per project policy
+
 ## [1.0.2] - 2025-08-11
 
 ### Fixed
