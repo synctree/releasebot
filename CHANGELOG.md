@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-08-12
+
+### Fixed
+- Branch validation now works in GitHub Actions environments where local branches may not exist after checkout
+- Fallback to remote branch and fetch if local branch is missing
+- All error messages and documentation use direct, factual language as per project guidelines
+- Tests updated for new validation logic
+
 ## [1.0.1] - 2025-08-12
 
 ### Fixed
