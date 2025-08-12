@@ -10,6 +10,7 @@
  */
 
 import * as core from '@actions/core';
+import * as fs from 'fs';
 import { GitOperations } from './git-operations.js';
 import { VersionAnalyzer } from './version-analyzer.js';
 import { AIAnalyzer } from './ai-analyzer.js';
@@ -259,8 +260,24 @@ export class ReleaseWorkflow {
    */
   private analyzeVersion(gitData: GitAnalysisData): VersionAnalysisData {
     try {
-      // Parse current version
-      const currentVersion = this.versionAnalyzer.parseVersion(this.config.packageJsonPath);
+      // Read and parse package.json to get the version string
+      const packageJsonContent = fs.readFileSync(this.config.packageJsonPath, 'utf-8');
+      let packageData: unknown;
+      try {
+        packageData = JSON.parse(packageJsonContent);
+      } catch (_err) {
+        throw new Error('Failed to parse package.json as JSON');
+      }
+      if (
+        typeof packageData !== 'object' ||
+        packageData === null ||
+        !('version' in packageData) ||
+        typeof (packageData as { version?: unknown }).version !== 'string'
+      ) {
+        throw new Error('No valid version field found in package.json');
+      }
+      const versionString = (packageData as { version: string }).version;
+      const currentVersion = this.versionAnalyzer.parseVersion(versionString);
 
       // Determine version bump based on git diff
       const versionBump = this.versionAnalyzer.determineVersionBump(gitData.diff);
