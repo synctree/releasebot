@@ -41,9 +41,20 @@ export class GitOperations {
 
       // Get repository information
       const remoteUrl = this.executeGitCommand('remote get-url origin').trim();
-      const defaultBranch = this.executeGitCommand('symbolic-ref refs/remotes/origin/HEAD')
-        .replace('refs/remotes/origin/', '')
-        .trim();
+
+      // For the default branch, we'll use a simple fallback approach
+      // since the exact default branch isn't critical for most operations
+      let defaultBranch = 'main'; // Safe fallback
+      try {
+        // Try to get the current branch if available
+        const currentBranch = this.executeGitCommand('rev-parse --abbrev-ref HEAD').trim();
+        if (currentBranch !== '' && currentBranch !== 'HEAD') {
+          defaultBranch = currentBranch;
+        }
+      } catch {
+        // If we can't get current branch, stick with 'main' fallback
+        core.debug('Could not determine current branch, using "main" as default');
+      }
 
       // Parse repository info from remote URL
       const repoInfo = this.parseRepositoryUrl(remoteUrl);

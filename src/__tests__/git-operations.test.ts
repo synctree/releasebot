@@ -31,7 +31,7 @@ describe('GitOperations', () => {
       mockExecSync
         .mockReturnValueOnce('') // rev-parse --git-dir
         .mockReturnValueOnce('git@github.com:synctree/releasebot.git\n') // remote get-url origin
-        .mockReturnValueOnce('refs/remotes/origin/main\n'); // symbolic-ref
+        .mockReturnValueOnce('main\n'); // rev-parse --abbrev-ref HEAD
 
       const result = gitOps.validateRepository();
 
@@ -51,12 +51,40 @@ describe('GitOperations', () => {
       mockExecSync
         .mockReturnValueOnce('') // rev-parse --git-dir
         .mockReturnValueOnce('https://github.com/synctree/releasebot.git\n') // remote get-url origin
-        .mockReturnValueOnce('refs/remotes/origin/main\n'); // symbolic-ref
+        .mockReturnValueOnce('main\n'); // rev-parse --abbrev-ref HEAD
 
       const result = gitOps.validateRepository();
 
       expect(result.owner).toBe('synctree');
       expect(result.name).toBe('releasebot');
+    });
+
+    it('should fallback to "main" when current branch detection fails', () => {
+      mockExecSync
+        .mockReturnValueOnce('') // rev-parse --git-dir
+        .mockReturnValueOnce('git@github.com:synctree/releasebot.git\n') // remote get-url origin
+        .mockImplementationOnce(() => {
+          // rev-parse --abbrev-ref HEAD fails
+          throw new Error('Unable to get current branch');
+        });
+
+      const result = gitOps.validateRepository();
+
+      expect(result.defaultBranch).toBe('main');
+      expect(mockCore.debug).toHaveBeenCalledWith(
+        'Could not determine current branch, using "main" as default'
+      );
+    });
+
+    it('should fallback to "main" when current branch is HEAD', () => {
+      mockExecSync
+        .mockReturnValueOnce('') // rev-parse --git-dir
+        .mockReturnValueOnce('git@github.com:synctree/releasebot.git\n') // remote get-url origin
+        .mockReturnValueOnce('HEAD\n'); // rev-parse --abbrev-ref HEAD returns HEAD (detached)
+
+      const result = gitOps.validateRepository();
+
+      expect(result.defaultBranch).toBe('main');
     });
 
     it('should throw error if not in git repository', () => {
