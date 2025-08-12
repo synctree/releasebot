@@ -174,8 +174,17 @@ export class GitOperations {
         this.executeGitCommand(`rev-parse --verify origin/${branch}`);
         return `origin/${branch}`;
       } catch {
-        // If neither exists, return original name and let git handle the error
-        return branch;
+        // If remote branch doesn't exist either, try to fetch latest remote refs
+        try {
+          this.executeGitCommand('fetch origin --prune');
+          core.debug(`Fetched latest remote references`);
+          // Try remote branch again after fetch
+          this.executeGitCommand(`rev-parse --verify origin/${branch}`);
+          return `origin/${branch}`;
+        } catch {
+          // If all attempts fail, return original name and let git handle the error
+          return branch;
+        }
       }
     }
   }
@@ -188,18 +197,34 @@ export class GitOperations {
       try {
         // First try to verify local branch
         this.executeGitCommand(`rev-parse --verify ${branch}`);
+        core.debug(`Branch '${branch}' found locally`);
       } catch {
         try {
           // If local branch doesn't exist, try remote branch
           this.executeGitCommand(`rev-parse --verify origin/${branch}`);
           core.debug(`Branch '${branch}' found as remote branch 'origin/${branch}'`);
         } catch {
-          // If neither local nor remote branch exists, try to fetch it
+          // If remote branch doesn't exist either, try to fetch it
           try {
-            this.executeGitCommand(`fetch origin ${branch}:${branch}`);
-            core.debug(`Fetched branch '${branch}' from remote`);
+            // First, fetch all remote refs to ensure we have the latest information
+            this.executeGitCommand('fetch origin --prune');
+            core.debug(`Fetched latest remote references`);
+            
+            // Try remote branch again after fetch
+            this.executeGitCommand(`rev-parse --verify origin/${branch}`);
+            core.debug(`Branch '${branch}' found as remote branch 'origin/${branch}' after fetch`);
           } catch {
-            throw new GitOperationError(`Branch '${branch}' does not exist locally or on remote`);
+            // As a last resort, try to fetch the specific branch
+            try {
+              this.executeGitCommand(`fetch origin ${branch}`);
+              core.debug(`Fetched specific branch '${branch}' from remote`);
+              
+              // Verify it exists as a remote branch now
+              this.executeGitCommand(`rev-parse --verify origin/${branch}`);
+              core.debug(`Branch '${branch}' verified as remote branch after specific fetch`);
+            } catch {
+              throw new GitOperationError(`Branch '${branch}' does not exist locally or on remote`);
+            }
           }
         }
       }
