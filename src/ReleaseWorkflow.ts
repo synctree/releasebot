@@ -211,19 +211,7 @@ export class ReleaseWorkflow {
             );
 
       core.setFailed(workflowError.message);
-
-      return {
-        version: '0.0.0',
-        releaseBranch: '',
-        versionBump: 'patch',
-        changelogEntry: '',
-        analysisStrategy: this.config.versioningStrategy,
-        aiConfidence: undefined,
-        reasoning: [workflowError.message],
-        commitCount: 0,
-        breakingChanges: false,
-        changelogData: undefined,
-      };
+      throw workflowError;
     }
   }
 

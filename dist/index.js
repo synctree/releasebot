@@ -27659,7 +27659,8 @@ class GitOperations {
                 // There are staged changes, proceed with commit
             }
             // Commit changes
-            this.executeGitCommand(`commit -m "${message}"`);
+            const escapedMessage = message.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+            this.executeGitCommand(`commit -m "${escapedMessage}"`);
             const commitSha = this.executeGitCommand('rev-parse HEAD').trim();
             core.info(`✅ Committed changes: ${commitSha.substring(0, 7)}`);
             return commitSha;
@@ -36175,7 +36176,10 @@ Respond with valid JSON in this exact format:
                 ],
                 temperature: this.config.temperature,
                 max_tokens: this.config.maxTokens,
-                response_format: { type: 'json_object' },
+                // Only use response_format for models that support it
+                ...(this.config.model.includes('gpt-4') && !this.config.model.includes('mini')
+                    ? { response_format: { type: 'json_object' } }
+                    : {}),
             });
             const choice = response.choices[0];
             if (choice?.message?.content === undefined ||
@@ -36909,18 +36913,7 @@ class ReleaseWorkflow {
                 ? error
                 : new WorkflowError(error instanceof Error ? error.message : 'Unknown workflow error', 'WORKFLOW_ERROR');
             core.setFailed(workflowError.message);
-            return {
-                version: '0.0.0',
-                releaseBranch: '',
-                versionBump: 'patch',
-                changelogEntry: '',
-                analysisStrategy: this.config.versioningStrategy,
-                aiConfidence: undefined,
-                reasoning: [workflowError.message],
-                commitCount: 0,
-                breakingChanges: false,
-                changelogData: undefined,
-            };
+            throw workflowError;
         }
     }
     /**

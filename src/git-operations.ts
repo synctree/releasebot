@@ -209,7 +209,7 @@ export class GitOperations {
             // First, fetch all remote refs to ensure we have the latest information
             this.executeGitCommand('fetch origin --prune');
             core.debug(`Fetched latest remote references`);
-            
+
             // Try remote branch again after fetch
             this.executeGitCommand(`rev-parse --verify origin/${branch}`);
             core.debug(`Branch '${branch}' found as remote branch 'origin/${branch}' after fetch`);
@@ -218,7 +218,7 @@ export class GitOperations {
             try {
               this.executeGitCommand(`fetch origin ${branch}`);
               core.debug(`Fetched specific branch '${branch}' from remote`);
-              
+
               // Verify it exists as a remote branch now
               this.executeGitCommand(`rev-parse --verify origin/${branch}`);
               core.debug(`Branch '${branch}' verified as remote branch after specific fetch`);
@@ -251,7 +251,8 @@ export class GitOperations {
       }
 
       // Commit changes
-      this.executeGitCommand(`commit -m "${message}"`);
+      const escapedMessage = message.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+      this.executeGitCommand(`commit -m "${escapedMessage}"`);
       const commitSha = this.executeGitCommand('rev-parse HEAD').trim();
 
       core.info(`✅ Committed changes: ${commitSha.substring(0, 7)}`);
