@@ -310,7 +310,10 @@ Respond with valid JSON in this exact format:
         ],
         temperature: this.config.temperature,
         max_tokens: this.config.maxTokens,
-        response_format: { type: 'json_object' },
+        // Only use response_format for models that support it
+        ...(this.config.model.includes('gpt-4') && !this.config.model.includes('mini')
+          ? { response_format: { type: 'json_object' } }
+          : {}),
       });
 
       const choice = response.choices[0];
