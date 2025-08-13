@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Fixed OpenAI API error: only use response_format for models that support it (not gpt-4o-mini)
+- Fixed commit message escaping to handle newlines and quotes in git commands
+- Fixed error handling in ReleaseWorkflow to properly rethrow errors instead of returning default values
+- Tool now properly reports failures instead of misleading success messages
+
 ## [1.0.3] - 2025-08-12
 
 ### Fixed
