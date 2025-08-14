@@ -250,9 +250,10 @@ export class GitOperations {
         // There are staged changes, proceed with commit
       }
 
-      // Commit changes
-      const escapedMessage = message.replace(/"/g, '\\"').replace(/\n/g, '\\n');
-      this.executeGitCommand(`commit -m "${escapedMessage}"`);
+      // Commit changes - use single quotes and simpler escaping for multi-line messages
+      // Single quotes prevent shell interpretation of newlines and special characters
+      const safeMessage = message.replace(/'/g, "'\"'\"'"); // Escape single quotes safely
+      this.executeGitCommand(`commit -m '${safeMessage}'`);
       const commitSha = this.executeGitCommand('rev-parse HEAD').trim();
 
       core.info(`✅ Committed changes: ${commitSha.substring(0, 7)}`);

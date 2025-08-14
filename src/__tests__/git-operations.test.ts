@@ -408,9 +408,9 @@ describe('GitOperations', () => {
         .mockReturnValueOnce('def456\n'); // Remote branch now exists after fetch
 
       expect(() => gitOps.validateBranches(['main', 'feature'])).not.toThrow();
-      
+
       // Verify the specific debug messages that indicate the GitHub Actions fix
-      expect(mockCore.debug).toHaveBeenCalledWith('Branch \'main\' found locally');
+      expect(mockCore.debug).toHaveBeenCalledWith("Branch 'main' found locally");
       expect(mockCore.debug).toHaveBeenCalledWith('Fetched latest remote references');
       expect(mockCore.debug).toHaveBeenCalledWith(
         "Branch 'feature' found as remote branch 'origin/feature' after fetch"
@@ -462,7 +462,7 @@ describe('GitOperations', () => {
       expect(result).toBe('abc123def456');
       expect(mockExecSync).toHaveBeenCalledWith('git add "file1.txt"', expect.any(Object));
       expect(mockExecSync).toHaveBeenCalledWith('git add "file2.txt"', expect.any(Object));
-      expect(mockExecSync).toHaveBeenCalledWith('git commit -m "test commit"', expect.any(Object));
+      expect(mockExecSync).toHaveBeenCalledWith("git commit -m 'test commit'", expect.any(Object));
       expect(mockCore.info).toHaveBeenCalledWith('✅ Committed changes: abc123d');
     });
 
@@ -475,6 +475,47 @@ describe('GitOperations', () => {
 
       expect(result).toBe('');
       expect(mockCore.info).toHaveBeenCalledWith('No changes to commit');
+    });
+
+    it('should handle multi-line commit messages correctly', () => {
+      const multiLineMessage = 'chore(release): 1.1.0\n\nRelease 1.1.0';
+      mockExecSync
+        .mockReturnValueOnce('') // add file1
+        .mockImplementationOnce(() => {
+          // diff --cached --exit-code
+          throw new Error('Changes exist');
+        })
+        .mockReturnValueOnce('abc123def456') // commit
+        .mockReturnValueOnce('abc123def456'); // rev-parse HEAD
+
+      const result = gitOps.commitChanges(['CHANGELOG.md'], multiLineMessage);
+
+      expect(result).toBe('abc123def456');
+      expect(mockExecSync).toHaveBeenCalledWith(
+        "git commit -m 'chore(release): 1.1.0\n\nRelease 1.1.0'",
+        expect.any(Object)
+      );
+    });
+
+    it('should handle commit messages with single quotes', () => {
+      const messageWithQuotes = "fix: handle user's input correctly";
+      mockExecSync
+        .mockReturnValueOnce('') // add file1
+        .mockImplementationOnce(() => {
+          // diff --cached --exit-code
+          throw new Error('Changes exist');
+        })
+        .mockReturnValueOnce('abc123def456') // commit
+        .mockReturnValueOnce('abc123def456'); // rev-parse HEAD
+
+      const result = gitOps.commitChanges(['src/file.ts'], messageWithQuotes);
+
+      expect(result).toBe('abc123def456');
+      // The single quote in "user's" should be escaped as '"'"'
+      expect(mockExecSync).toHaveBeenCalledWith(
+        "git commit -m 'fix: handle user'\"'\"'s input correctly'",
+        expect.any(Object)
+      );
     });
 
     it('should throw error if commit fails', () => {
