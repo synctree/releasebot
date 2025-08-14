@@ -36176,8 +36176,13 @@ Respond with valid JSON in this exact format:
                 ],
                 temperature: this.config.temperature,
                 max_tokens: this.config.maxTokens,
-                // Only use response_format for models that support it
-                ...(this.config.model.includes('gpt-4') && !this.config.model.includes('mini')
+                // Only use response_format for models that explicitly support it
+                // Based on OpenAI docs: GPT-4o, GPT-4 Turbo, and GPT-3.5 Turbo support response_format
+                // Regular GPT-4 models (gpt-4, gpt-4-0613, etc.) do NOT support it
+                // gpt-3.5-turbo-instruct is a legacy model that also doesn't support it
+                ...(this.config.model.startsWith('gpt-4o') ||
+                    this.config.model.includes('gpt-4-turbo') ||
+                    (this.config.model.startsWith('gpt-3.5-turbo') && !this.config.model.includes('instruct'))
                     ? { response_format: { type: 'json_object' } }
                     : {}),
             });

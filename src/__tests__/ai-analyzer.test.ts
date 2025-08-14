@@ -410,4 +410,182 @@ describe('AIAnalyzer', () => {
       expect(mockOpenAICreate).toHaveBeenCalledTimes(3);
     });
   });
+
+  describe('response_format parameter support', () => {
+    it('should include response_format for GPT-4o models', async () => {
+      const gpt4oAnalyzer = new AIAnalyzer({ ...mockConfig, model: 'gpt-4o' });
+      // Get reference to the new analyzer's mock
+      const OpenAI = jest.requireMock('openai').default;
+      const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+      const mockCreate = instance.chat.completions.create;
+      mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+      await gpt4oAnalyzer.analyze(mockGitDiff);
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response_format: { type: 'json_object' },
+        })
+      );
+    });
+
+    it('should include response_format for GPT-4o-mini models', async () => {
+      const gpt4oMiniAnalyzer = new AIAnalyzer({ ...mockConfig, model: 'gpt-4o-mini' });
+      const OpenAI = jest.requireMock('openai').default;
+      const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+      const mockCreate = instance.chat.completions.create;
+      mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+      await gpt4oMiniAnalyzer.analyze(mockGitDiff);
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response_format: { type: 'json_object' },
+        })
+      );
+    });
+
+    it('should include response_format for GPT-4 Turbo models', async () => {
+      const gpt4TurboAnalyzer = new AIAnalyzer({ ...mockConfig, model: 'gpt-4-turbo' });
+      const OpenAI = jest.requireMock('openai').default;
+      const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+      const mockCreate = instance.chat.completions.create;
+      mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+      await gpt4TurboAnalyzer.analyze(mockGitDiff);
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response_format: { type: 'json_object' },
+        })
+      );
+    });
+
+    it('should include response_format for GPT-3.5 Turbo models', async () => {
+      const gpt35TurboAnalyzer = new AIAnalyzer({ ...mockConfig, model: 'gpt-3.5-turbo' });
+      const OpenAI = jest.requireMock('openai').default;
+      const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+      const mockCreate = instance.chat.completions.create;
+      mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+      await gpt35TurboAnalyzer.analyze(mockGitDiff);
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response_format: { type: 'json_object' },
+        })
+      );
+    });
+
+    it('should NOT include response_format for regular GPT-4 models', async () => {
+      const gpt4Analyzer = new AIAnalyzer({ ...mockConfig, model: 'gpt-4' });
+      const OpenAI = jest.requireMock('openai').default;
+      const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+      const mockCreate = instance.chat.completions.create;
+      mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+      await gpt4Analyzer.analyze(mockGitDiff);
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          response_format: expect.anything(),
+        })
+      );
+    });
+
+    it('should NOT include response_format for GPT-4 snapshot models', async () => {
+      const gpt4SnapshotAnalyzer = new AIAnalyzer({ ...mockConfig, model: 'gpt-4-0613' });
+      const OpenAI = jest.requireMock('openai').default;
+      const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+      const mockCreate = instance.chat.completions.create;
+      mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+      await gpt4SnapshotAnalyzer.analyze(mockGitDiff);
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          response_format: expect.anything(),
+        })
+      );
+    });
+
+    it('should NOT include response_format for GPT-3.5 Turbo Instruct', async () => {
+      const gpt35InstructAnalyzer = new AIAnalyzer({
+        ...mockConfig,
+        model: 'gpt-3.5-turbo-instruct',
+      });
+      const OpenAI = jest.requireMock('openai').default;
+      const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+      const mockCreate = instance.chat.completions.create;
+      mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+      await gpt35InstructAnalyzer.analyze(mockGitDiff);
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.not.objectContaining({
+          response_format: expect.anything(),
+        })
+      );
+    });
+
+    // Test matrix of all supported models
+    const supportedModels = [
+      'gpt-4o',
+      'gpt-4o-mini',
+      'gpt-4o-2024-05-13',
+      'gpt-4-turbo',
+      'gpt-4-turbo-2024-04-09',
+      'gpt-4-turbo-preview',
+      'gpt-3.5-turbo',
+      'gpt-3.5-turbo-0125',
+      'gpt-3.5-turbo-1106',
+    ];
+
+    const unsupportedModels = [
+      'gpt-4',
+      'gpt-4-0613',
+      'gpt-4-0314',
+      'gpt-3.5-turbo-instruct',
+      'text-davinci-003',
+      'babbage-002',
+    ];
+
+    test.each(supportedModels)(
+      'should include response_format for supported model: %s',
+      async model => {
+        const analyzer = new AIAnalyzer({ ...mockConfig, model });
+        const OpenAI = jest.requireMock('openai').default;
+        const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+        const mockCreate = instance.chat.completions.create;
+        mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+        await analyzer.analyze(mockGitDiff);
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.objectContaining({
+            response_format: { type: 'json_object' },
+          })
+        );
+      }
+    );
+
+    test.each(unsupportedModels)(
+      'should NOT include response_format for unsupported model: %s',
+      async model => {
+        const analyzer = new AIAnalyzer({ ...mockConfig, model });
+        const OpenAI = jest.requireMock('openai').default;
+        const instance = OpenAI.mock.results[OpenAI.mock.results.length - 1].value;
+        const mockCreate = instance.chat.completions.create;
+        mockCreate.mockResolvedValueOnce(mockAIResponse);
+
+        await analyzer.analyze(mockGitDiff);
+
+        expect(mockCreate).toHaveBeenCalledWith(
+          expect.not.objectContaining({
+            response_format: expect.anything(),
+          })
+        );
+      }
+    );
+  });
 });
