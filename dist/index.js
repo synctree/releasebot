@@ -27456,8 +27456,47 @@ class GitOperationError extends Error {
  */
 class GitOperations {
     workingDirectory;
-    constructor(workingDirectory = process.cwd()) {
+    constructor(workingDirectory = process.cwd(), githubToken) {
         this.workingDirectory = workingDirectory;
+        // Configure git remote authentication if GitHub token is provided
+        if (githubToken !== undefined && githubToken !== '') {
+            this.configureGitAuthentication(githubToken);
+        }
+    }
+    /**
+     * Configure git authentication for GitHub
+     */
+    configureGitAuthentication(githubToken) {
+        try {
+            // Get current remote URL
+            const remoteUrl = this.executeGitCommand('remote get-url origin').trim();
+            // Convert to authenticated URL if it's not already
+            let authUrl;
+            if (remoteUrl.startsWith('https://')) {
+                // Already HTTPS, just add token
+                authUrl = remoteUrl.replace('https://github.com/', `https://x-access-token:${githubToken}@github.com/`);
+            }
+            else if (remoteUrl.startsWith('git@')) {
+                // Convert SSH to HTTPS with token
+                const sshPattern = /git@github\.com:([^/]+)\/(.+)\.git$/;
+                const match = sshPattern.exec(remoteUrl);
+                if (match?.[1] !== undefined && match[1] !== '' && match[2] !== undefined && match[2] !== '') {
+                    authUrl = `https://x-access-token:${githubToken}@github.com/${match[1]}/${match[2]}.git`;
+                }
+                else {
+                    throw new Error('Unable to parse SSH URL');
+                }
+            }
+            else {
+                throw new Error('Unsupported remote URL format');
+            }
+            // Update remote URL with authentication
+            this.executeGitCommand(`remote set-url origin "${authUrl}"`);
+            core.debug('✅ Configured git authentication with GitHub token');
+        }
+        catch (error) {
+            core.warning(`Failed to configure git authentication: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
     /**
      * Validate repository state and permissions
@@ -36874,7 +36913,7 @@ class ReleaseWorkflow {
     constructor(config) {
         this.config = config;
         // Initialize core modules
-        this.gitOps = new GitOperations(process.cwd());
+        this.gitOps = new GitOperations(process.cwd(), config.githubToken);
         this.versionAnalyzer = new VersionAnalyzer();
         // Initialize AI analyzer if strategy requires it
         this.aiAnalyzer = this.shouldUseAI() ? this.createAIAnalyzer() : null;
@@ -37068,6 +37107,9 @@ class ReleaseWorkflow {
                 commitSha = this.gitOps.commitChanges([this.config.changelogPath, this.config.packageJsonPath], `chore(release): ${this.formatVersion(versionData.newVersion)}\n\nRelease ${this.formatVersion(versionData.newVersion)}`);
                 core.info(`📦 Committed changes: ${commitSha}`);
             }
+            // Push the release branch to remote
+            this.gitOps.pushChanges(branchName, true); // setUpstream = true for new branch
+            core.info(`🚀 Pushed release branch to remote: ${branchName}`);
             // Note: Git tag creation is not yet implemented in GitOperations
             // TODO: Implement git tag creation in GitOperations class
             // This will be addressed in a future enhancement issue

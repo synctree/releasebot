@@ -16,7 +16,11 @@ export declare class GitOperationError extends Error {
  */
 export declare class GitOperations {
     private readonly workingDirectory;
-    constructor(workingDirectory?: string);
+    constructor(workingDirectory?: string, githubToken?: string);
+    /**
+     * Configure git authentication for GitHub
+     */
+    private configureGitAuthentication;
     /**
      * Validate repository state and permissions
      */

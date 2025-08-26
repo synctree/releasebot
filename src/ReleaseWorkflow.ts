@@ -150,7 +150,7 @@ export class ReleaseWorkflow {
 
   constructor(private readonly config: WorkflowConfig) {
     // Initialize core modules
-    this.gitOps = new GitOperations(process.cwd());
+    this.gitOps = new GitOperations(process.cwd(), config.githubToken);
 
     this.versionAnalyzer = new VersionAnalyzer();
 
@@ -420,6 +420,10 @@ export class ReleaseWorkflow {
         );
         core.info(`📦 Committed changes: ${commitSha}`);
       }
+
+      // Push the release branch to remote
+      this.gitOps.pushChanges(branchName, true); // setUpstream = true for new branch
+      core.info(`🚀 Pushed release branch to remote: ${branchName}`);
 
       // Note: Git tag creation is not yet implemented in GitOperations
       // TODO: Implement git tag creation in GitOperations class

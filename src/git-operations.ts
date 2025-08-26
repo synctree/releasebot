@@ -27,8 +27,57 @@ export class GitOperationError extends Error {
 export class GitOperations {
   private readonly workingDirectory: string;
 
-  constructor(workingDirectory: string = process.cwd()) {
+  constructor(workingDirectory: string = process.cwd(), githubToken?: string) {
     this.workingDirectory = workingDirectory;
+
+    // Configure git remote authentication if GitHub token is provided
+    if (githubToken !== undefined && githubToken !== '') {
+      this.configureGitAuthentication(githubToken);
+    }
+  }
+
+  /**
+   * Configure git authentication for GitHub
+   */
+  private configureGitAuthentication(githubToken: string): void {
+    try {
+      // Get current remote URL
+      const remoteUrl = this.executeGitCommand('remote get-url origin').trim();
+
+      // Convert to authenticated URL if it's not already
+      let authUrl: string;
+      if (remoteUrl.startsWith('https://')) {
+        // Already HTTPS, just add token
+        authUrl = remoteUrl.replace(
+          'https://github.com/',
+          `https://x-access-token:${githubToken}@github.com/`
+        );
+      } else if (remoteUrl.startsWith('git@')) {
+        // Convert SSH to HTTPS with token
+        const sshPattern = /git@github\.com:([^/]+)\/(.+)\.git$/;
+        const match = sshPattern.exec(remoteUrl);
+        if (
+          match?.[1] !== undefined &&
+          match[1] !== '' &&
+          match[2] !== undefined &&
+          match[2] !== ''
+        ) {
+          authUrl = `https://x-access-token:${githubToken}@github.com/${match[1]}/${match[2]}.git`;
+        } else {
+          throw new Error('Unable to parse SSH URL');
+        }
+      } else {
+        throw new Error('Unsupported remote URL format');
+      }
+
+      // Update remote URL with authentication
+      this.executeGitCommand(`remote set-url origin "${authUrl}"`);
+      core.debug('✅ Configured git authentication with GitHub token');
+    } catch (error) {
+      core.warning(
+        `Failed to configure git authentication: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
 
   /**
