@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed critical git operations bug where release branches and commits were created locally but never pushed to remote repository
+- Added git remote authentication with GitHub token for successful push operations
+- Workflow now correctly creates visible release branches and commits in the repository
+- Fixed misleading success messages that appeared even when git operations failed
+
 ## [1.0.4] - 2025-08-13
 
 ### Fixed

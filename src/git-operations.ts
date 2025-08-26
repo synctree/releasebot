@@ -44,15 +44,27 @@ export class GitOperations {
       // Get current remote URL
       const remoteUrl = this.executeGitCommand('remote get-url origin').trim();
 
+      // Skip configuration if URL is already authenticated or masked
+      if (remoteUrl.includes('@') && remoteUrl.includes('github.com')) {
+        core.debug('Git remote URL already appears to be authenticated, skipping configuration');
+        return;
+      }
+
+      // Skip configuration if URL appears to be masked (contains ***)
+      if (remoteUrl.includes('***')) {
+        core.debug('Git remote URL appears to be masked, skipping authentication configuration');
+        return;
+      }
+
       // Convert to authenticated URL if it's not already
       let authUrl: string;
-      if (remoteUrl.startsWith('https://')) {
+      if (remoteUrl.startsWith('https://github.com/')) {
         // Already HTTPS, just add token
         authUrl = remoteUrl.replace(
           'https://github.com/',
           `https://x-access-token:${githubToken}@github.com/`
         );
-      } else if (remoteUrl.startsWith('git@')) {
+      } else if (remoteUrl.startsWith('git@github.com:')) {
         // Convert SSH to HTTPS with token
         const sshPattern = /git@github\.com:([^/]+)\/(.+)\.git$/;
         const match = sshPattern.exec(remoteUrl);
@@ -67,7 +79,8 @@ export class GitOperations {
           throw new Error('Unable to parse SSH URL');
         }
       } else {
-        throw new Error('Unsupported remote URL format');
+        core.debug(`Skipping authentication for unsupported URL format: ${remoteUrl}`);
+        return;
       }
 
       // Update remote URL with authentication
@@ -416,14 +429,36 @@ export class GitOperations {
    * Parse repository URL to extract owner and name
    */
   private parseRepositoryUrl(url: string): { owner: string; name: string } {
-    // Handle both HTTPS and SSH URLs
+    // Handle masked URLs first (GitHub Actions may mask tokens)
+    if (url.includes('***')) {
+      // Try to extract from a masked URL pattern like: ***github.com/owner/repo
+      const maskedPattern = /\*{3}github\.com\/([^/]+)\/([^/\s]+)/;
+      const maskedMatch = maskedPattern.exec(url);
+      if (
+        maskedMatch?.[1] !== undefined &&
+        maskedMatch[1] !== '' &&
+        maskedMatch[2] !== undefined &&
+        maskedMatch[2] !== ''
+      ) {
+        return {
+          owner: maskedMatch[1],
+          name: maskedMatch[2].replace(/\.git$/, ''), // Remove .git if present
+        };
+      }
+    }
+
+    // Handle authenticated HTTPS URLs, SSH URLs, and regular URLs
     const patterns = [
+      // Authenticated HTTPS: https://token@github.com/owner/repo.git
+      /https:\/\/[^@]+@github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
+      // Regular HTTPS: https://github.com/owner/repo.git
       /https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?$/,
+      // SSH: git@github.com:owner/repo.git
       /git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/,
     ];
 
     for (const pattern of patterns) {
-      const match = url.match(pattern);
+      const match = pattern.exec(url);
       if (
         match?.[1] !== undefined &&
         match[1] !== '' &&

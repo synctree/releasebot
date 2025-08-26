@@ -104,6 +104,33 @@ describe('GitOperations', () => {
       expect(() => gitOps.validateRepository()).toThrow(GitOperationError);
       expect(() => gitOps.validateRepository()).toThrow('Repository validation failed');
     });
+
+    it('should handle masked repository URL from GitHub Actions', () => {
+      mockExecSync
+        .mockReturnValueOnce('') // rev-parse --git-dir
+        .mockReturnValueOnce('***github.com/synctree/lemme\n') // masked remote URL
+        .mockReturnValueOnce('main\n'); // rev-parse --abbrev-ref HEAD
+
+      const result = gitOps.validateRepository();
+
+      expect(result.owner).toBe('synctree');
+      expect(result.name).toBe('lemme');
+      expect(result.defaultBranch).toBe('main');
+    });
+
+    it('should handle authenticated HTTPS URL', () => {
+      mockExecSync
+        .mockReturnValueOnce('') // rev-parse --git-dir
+        .mockReturnValueOnce(
+          'https://x-access-token:ghp_abc123@github.com/synctree/releasebot.git\n'
+        ) // authenticated URL
+        .mockReturnValueOnce('main\n'); // rev-parse --abbrev-ref HEAD
+
+      const result = gitOps.validateRepository();
+
+      expect(result.owner).toBe('synctree');
+      expect(result.name).toBe('releasebot');
+    });
   });
 
   describe('createReleaseBranch', () => {
