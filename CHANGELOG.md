@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added git remote authentication with GitHub token for successful push operations
 - Workflow now correctly creates visible release branches and commits in the repository
 - Fixed misleading success messages that appeared even when git operations failed
+- Fixed repository URL parsing to handle masked URLs and authenticated URLs in GitHub Actions environment
+- Added defensive git authentication configuration to prevent failures with pre-authenticated remotes
 
 ## [1.0.4] - 2025-08-13
 

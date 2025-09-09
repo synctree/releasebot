@@ -37403,11 +37403,15 @@ class ReleaseWorkflow {
         if (this.config.aiProvider === 'openai' &&
             this.config.openaiApiKey !== undefined &&
             this.config.openaiApiKey !== '') {
-            return new AIAnalyzer({
+            const config = {
                 apiKey: this.config.openaiApiKey,
-                model: this.config.aiModel,
                 confidenceThreshold: this.config.aiConfidenceThreshold,
-            });
+            };
+            // Only include model if it's a non-empty string
+            if (this.config.aiModel !== undefined && this.config.aiModel !== '' && this.config.aiModel.trim() !== '') {
+                config.model = this.config.aiModel;
+            }
+            return new AIAnalyzer(config);
         }
         // TODO: Add Anthropic support
         return null;
