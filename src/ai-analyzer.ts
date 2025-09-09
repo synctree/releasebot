@@ -5,6 +5,7 @@
 
 import OpenAI from 'openai';
 import * as core from '@actions/core';
+import { processGitDiff, DEFAULT_DIFF_CONFIG } from './utils/diffProcessor.js';
 import type {
   GitDiff,
   AIAnalysisResult,
@@ -131,8 +132,19 @@ export class AIAnalyzer implements VersionAnalyzer {
         throw new AIAnalysisError('No commits found in git diff');
       }
 
+      // Process diff to fit within model constraints
+      const processedDiff = processGitDiff(gitDiff, {
+        ...DEFAULT_DIFF_CONFIG,
+        maxFiles: 30, // Conservative limit for AI analysis
+        maxTotalChanges: 1500, // Reasonable limit to keep under token constraints
+      });
+
+      core.debug(
+        `📊 Processed diff: ${processedDiff.fileChanges.length} files, ${processedDiff.totalAdditions + processedDiff.totalDeletions} total changes`
+      );
+
       // Prepare analysis context
-      const analysisPrompt = this.buildAnalysisPrompt(gitDiff);
+      const analysisPrompt = this.buildAnalysisPrompt(processedDiff);
 
       // Execute AI analysis with retry logic
       const rawResponse = await this.executeWithRetry(async () => this.callOpenAI(analysisPrompt));
@@ -141,7 +153,7 @@ export class AIAnalyzer implements VersionAnalyzer {
       const parsedResult = this.parseAIResponse(rawResponse);
 
       // Calculate confidence based on response quality
-      this.confidence = this.calculateConfidence(parsedResult, gitDiff);
+      this.confidence = this.calculateConfidence(parsedResult, processedDiff);
 
       // Build comprehensive analysis result
       const analysisResult: AIAnalysisResult = {
@@ -149,7 +161,7 @@ export class AIAnalyzer implements VersionAnalyzer {
         confidence: this.confidence,
         reasoning: parsedResult.reasoning,
         changes: parsedResult.changes,
-        metadata: this.buildAnalysisMetadata(gitDiff, startTime),
+        metadata: this.buildAnalysisMetadata(processedDiff, startTime),
         strategy: 'ai',
         executionTime: Date.now() - startTime,
         // AI-specific fields
@@ -346,6 +358,15 @@ Respond with valid JSON in this exact format:
       if (error instanceof Error && 'status' in error) {
         const openaiError = error as Error & { status: number };
         const retryable = openaiError.status === 429 || openaiError.status >= 500;
+
+        // Check for token limit errors specifically
+        if (openaiError.status === 400 && openaiError.message.includes('maximum context length')) {
+          throw new AIAnalysisError(
+            `Token limit exceeded for model ${this.config.model}. Consider using gpt-4o-mini for larger diffs or implement diff filtering.`,
+            openaiError,
+            false // Not retryable - need different strategy
+          );
+        }
 
         throw new AIAnalysisError(
           `OpenAI API error (${openaiError.status}): ${openaiError.message}`,

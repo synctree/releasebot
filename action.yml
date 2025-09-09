@@ -54,9 +54,9 @@ inputs:
   
   # AI Configuration
   ai-model:
-    description: 'AI model to use (e.g., gpt-4, gpt-3.5-turbo, claude-3-opus)'
+    description: 'AI model to use (e.g., gpt-4o-mini, gpt-4o, gpt-4, claude-3-opus)'
     required: false
-    default: 'gpt-4'
+    default: 'gpt-4o-mini'
   
   ai-confidence-threshold:
     description: 'Minimum confidence score to trust AI analysis (0.0-1.0)'
