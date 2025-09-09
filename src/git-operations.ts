@@ -154,10 +154,10 @@ export class GitOperations {
       try {
         this.executeGitCommand(`rev-parse --verify ${branchName}`);
         localExists = true;
-        core.info(`📋 Local branch ${branchName} already exists, checking out`);
-        this.executeGitCommand(`checkout ${branchName}`);
+        core.debug(`Local branch ${branchName} exists`);
       } catch {
         localExists = false;
+        core.debug(`Local branch ${branchName} does not exist`);
       }
 
       // Check if branch exists on remote
@@ -165,33 +165,47 @@ export class GitOperations {
       try {
         this.executeGitCommand(`ls-remote --exit-code origin ${branchName}`);
         remoteExists = true;
-        core.info(`📋 Remote branch ${branchName} already exists`);
+        core.debug(`Remote branch ${branchName} exists`);
       } catch {
         remoteExists = false;
+        core.debug(`Remote branch ${branchName} does not exist`);
       }
 
-      // Handle different scenarios
+      // Handle different scenarios with robust git commands
       if (localExists && remoteExists) {
-        // Both exist, pull latest changes
-        core.info(`🔄 Pulling latest changes from remote ${branchName}`);
+        // Both exist - checkout local and sync with remote
+        core.info(`� Both local and remote branch ${branchName} exist, syncing`);
+        this.executeGitCommand(`checkout ${branchName}`);
         this.executeGitCommand(`pull origin ${branchName}`);
+      } else if (localExists && !remoteExists) {
+        // Only local exists - use local branch
+        core.info(`� Using existing local branch ${branchName}`);
+        this.executeGitCommand(`checkout ${branchName}`);
       } else if (!localExists && remoteExists) {
-        // Remote exists but not local, checkout from remote
-        core.info(`📥 Checking out existing remote branch ${branchName}`);
-        this.executeGitCommand(`checkout --track origin/${branchName}`);
-      } else if (!localExists && !remoteExists) {
-        // Neither exists, create new branch
+        // Only remote exists - fetch and checkout
+        core.info(`📥 Fetching and checking out remote branch ${branchName}`);
+        try {
+          // Fetch the specific branch
+          this.executeGitCommand(`fetch origin ${branchName}:${branchName}`);
+          this.executeGitCommand(`checkout ${branchName}`);
+        } catch (_fetchError) {
+          // Fallback: try alternative approach
+          core.warning(`Fetch failed, trying alternative checkout method`);
+          this.executeGitCommand(`fetch origin ${branchName}`);
+          this.executeGitCommand(`checkout -b ${branchName} origin/${branchName}`);
+        }
+      } else {
+        // Neither exists - create new branch
         core.info(`🌱 Creating new branch ${branchName}`);
         this.executeGitCommand(`checkout -b ${branchName}`);
         core.info(`✅ Created release branch: ${branchName}`);
       }
-      // If localExists && !remoteExists, we're already on the local branch
 
       return branchName;
     } catch (error) {
       throw new GitOperationError(
         `Failed to create release branch: ${error instanceof Error ? error.message : String(error)}`,
-        `git checkout -b ${branchName}`
+        `git operations for ${branchName}`
       );
     }
   }
