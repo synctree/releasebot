@@ -178,7 +178,7 @@ export class GitOperations {
       } else if (!localExists && remoteExists) {
         // Remote exists but not local, checkout from remote
         core.info(`📥 Checking out existing remote branch ${branchName}`);
-        this.executeGitCommand(`checkout -b ${branchName} origin/${branchName}`);
+        this.executeGitCommand(`checkout --track origin/${branchName}`);
       } else if (!localExists && !remoteExists) {
         // Neither exists, create new branch
         core.info(`🌱 Creating new branch ${branchName}`);
