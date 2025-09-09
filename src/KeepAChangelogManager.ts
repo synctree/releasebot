@@ -208,7 +208,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       this.parseChangelog(content);
     }
 
-    // For now, just write the entries to a simple format
+    // Group entries by their mapped categories
+    const categorizedEntries: Record<string, string[]> = {};
+
+    for (const entry of entries) {
+      const section = KeepAChangelogManager.SECTION_MAPPING[entry.category] ?? 'Changed';
+
+      categorizedEntries[section] ??= [];
+
+      // Format entry with scope if available
+      const scope = entry.scope !== undefined && entry.scope !== '' ? `**${entry.scope}**: ` : '';
+      const description = `${scope}${entry.description}`;
+
+      categorizedEntries[section].push(description);
+    }
+
+    // Add entries to the unreleased section
+    if (this.currentChangelog !== null && this.currentChangelog !== undefined) {
+      // Merge with existing entries
+      for (const [section, newEntries] of Object.entries(categorizedEntries)) {
+        this.currentChangelog.unreleased.entries[section] ??= [];
+        this.currentChangelog.unreleased.entries[section].push(...newEntries);
+      }
+    }
+
+    // Rebuild and write the changelog
     const updatedContent = this.rebuildMarkdown();
     await this.writeChangelogFile(updatedContent);
 
@@ -438,9 +462,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   private rebuildMarkdown(): string {
     if (this.currentChangelog === undefined) {
-      return KeepAChangelogManager.DEFAULT_HEADER;
+      return KeepAChangelogManager.DEFAULT_HEADER + '\n\n## [Unreleased]\n\n';
     }
 
-    return KeepAChangelogManager.DEFAULT_HEADER + '\n\n## [Unreleased]\n\n';
+    let markdown = KeepAChangelogManager.DEFAULT_HEADER + '\n\n## [Unreleased]\n\n';
+
+    // Add entries from unreleased section
+    const unreleasedEntries = this.currentChangelog.unreleased.entries;
+
+    for (const sectionName of KeepAChangelogManager.SECTION_ORDER) {
+      const entries = unreleasedEntries[sectionName];
+      if (entries !== undefined && entries.length > 0) {
+        markdown += `### ${sectionName}\n\n`;
+        for (const entry of entries) {
+          markdown += `- ${entry}\n`;
+        }
+        markdown += '\n';
+      }
+    }
+
+    // Add any other sections not in the standard order
+    for (const [sectionName, entries] of Object.entries(unreleasedEntries)) {
+      if (!KeepAChangelogManager.SECTION_ORDER.includes(sectionName) && entries.length > 0) {
+        markdown += `### ${sectionName}\n\n`;
+        for (const entry of entries) {
+          markdown += `- ${entry}\n`;
+        }
+        markdown += '\n';
+      }
+    }
+
+    // Add releases if any exist
+    for (const release of this.currentChangelog.releases) {
+      markdown += `## [${release.version}] - ${release.date}\n\n`;
+      // TODO: Add release content when needed
+    }
+
+    return markdown;
   }
 }
