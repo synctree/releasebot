@@ -149,19 +149,43 @@ export class GitOperations {
       this.executeGitCommand(`checkout ${baseBranch}`);
       this.executeGitCommand('pull origin ' + baseBranch);
 
-      // Check if branch already exists
+      // Check if branch already exists locally
+      let localExists = false;
       try {
         this.executeGitCommand(`rev-parse --verify ${branchName}`);
-        core.warning(`Branch ${branchName} already exists, using existing branch`);
+        localExists = true;
+        core.info(`📋 Local branch ${branchName} already exists, checking out`);
         this.executeGitCommand(`checkout ${branchName}`);
-        return branchName;
       } catch {
-        // Branch doesn't exist, create it
+        localExists = false;
       }
 
-      // Create and checkout new branch
-      this.executeGitCommand(`checkout -b ${branchName}`);
-      core.info(`✅ Created release branch: ${branchName}`);
+      // Check if branch exists on remote
+      let remoteExists = false;
+      try {
+        this.executeGitCommand(`ls-remote --exit-code origin ${branchName}`);
+        remoteExists = true;
+        core.info(`📋 Remote branch ${branchName} already exists`);
+      } catch {
+        remoteExists = false;
+      }
+
+      // Handle different scenarios
+      if (localExists && remoteExists) {
+        // Both exist, pull latest changes
+        core.info(`🔄 Pulling latest changes from remote ${branchName}`);
+        this.executeGitCommand(`pull origin ${branchName}`);
+      } else if (!localExists && remoteExists) {
+        // Remote exists but not local, checkout from remote
+        core.info(`📥 Checking out existing remote branch ${branchName}`);
+        this.executeGitCommand(`checkout -b ${branchName} origin/${branchName}`);
+      } else if (!localExists && !remoteExists) {
+        // Neither exists, create new branch
+        core.info(`🌱 Creating new branch ${branchName}`);
+        this.executeGitCommand(`checkout -b ${branchName}`);
+        core.info(`✅ Created release branch: ${branchName}`);
+      }
+      // If localExists && !remoteExists, we're already on the local branch
 
       return branchName;
     } catch (error) {
@@ -333,9 +357,29 @@ export class GitOperations {
    */
   pushChanges(branchName: string, setUpstream: boolean = false): void {
     try {
-      const pushCommand = setUpstream
-        ? `push --set-upstream origin ${branchName}`
-        : `push origin ${branchName}`;
+      // Check if the remote branch already exists
+      let remoteExists = false;
+      try {
+        this.executeGitCommand(`ls-remote --exit-code origin ${branchName}`);
+        remoteExists = true;
+        core.debug(`Remote branch ${branchName} already exists`);
+      } catch {
+        remoteExists = false;
+        core.debug(`Remote branch ${branchName} does not exist`);
+      }
+
+      // Use appropriate push command based on remote branch existence
+      let pushCommand: string;
+      if (remoteExists) {
+        // Branch exists remotely, just push normally
+        pushCommand = `push origin ${branchName}`;
+      } else if (setUpstream) {
+        // New branch, set upstream
+        pushCommand = `push --set-upstream origin ${branchName}`;
+      } else {
+        // Regular push
+        pushCommand = `push origin ${branchName}`;
+      }
 
       this.executeGitCommand(pushCommand);
       core.info(`✅ Pushed changes to ${branchName}`);
